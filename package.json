@@ -1,0 +1,22 @@
+{
+  "name": "glints-collate-message",
+  "version": "0.0.1",
+  "description": "To collate formatted messages from Glints front end projects for translation (i18n) uses.",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha --reporter spec"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jieqitong/glints-collate-message.git"
+  },
+  "keywords": [
+    "glints"
+  ],
+  "author": "Tong Jieqi <jieqitong91@gmail.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jieqitong/glints-collate-message/issues"
+  },
+  "homepage": "https://github.com/jieqitong/glints-collate-message#readme"
+}
