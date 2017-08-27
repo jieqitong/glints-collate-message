@@ -18,5 +18,17 @@
   "bugs": {
     "url": "https://github.com/jieqitong/glints-collate-message/issues"
   },
-  "homepage": "https://github.com/jieqitong/glints-collate-message#readme"
+  "homepage": "https://github.com/jieqitong/glints-collate-message#readme",
+  "devDependencies": {
+    "chai": "^4.1.1",
+    "mocha": "^3.5.0"
+  },
+  "bin": {
+    "glints-collate-message": "./index.js"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.104.0",
+    "bluebird": "^3.5.0",
+    "commander": "^2.11.0"
+  }
 }
