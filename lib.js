@@ -1,7 +1,6 @@
 'use strict';
 
 module.exports = function (rootDirectory, configFile) {
-
   const AWS = require('aws-sdk');
   const fs = require('fs');
   const encoding = 'utf8';
@@ -27,6 +26,7 @@ module.exports = function (rootDirectory, configFile) {
 
   // Filter only javascript files
   const jsFiles = files.filter(x => x.endsWith('.js'));
+  console.log('.js found: ' + jsFiles);
 
   // Get files' contents
   const contents = jsFiles.map(x => fs.readFileSync(x, encoding));
@@ -70,6 +70,7 @@ module.exports = function (rootDirectory, configFile) {
   })
     .then(data => {
       locales = data.Contents.filter(x => x.Key.endsWith('.json')).map(x => x.Key);
+      console.log('locales: ' + locales);
 
       // Get list of files from s3 bucket
       return Promise.all(locales
@@ -80,6 +81,10 @@ module.exports = function (rootDirectory, configFile) {
     })
     .then(data => {
       const ids = Object.keys(results);
+      console.log(ids.length);
+      console.log(ids);
+      console.log(results);
+
       const files = data.map((x, i) => {
         const key = locales[i];
         const old = JSON.parse(x.Body.toString());
@@ -92,6 +97,10 @@ module.exports = function (rootDirectory, configFile) {
             body[id] = key.endsWith('en.json')? results[id] : '';
           }
         });
+
+        console.log(key);
+        console.log(old);
+        console.log(body);
 
         return {
           key: key,
