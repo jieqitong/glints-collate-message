@@ -1,11 +1,10 @@
 'use strict';
+const AWS = require('aws-sdk');
+const fs = require('fs');
+const Promise = require('bluebird');
+const encoding = 'utf8';
 
-module.exports = function (rootDirectory, configFile) {
-  const AWS = require('aws-sdk');
-  const fs = require('fs');
-  const encoding = 'utf8';
-  const Promise = require('bluebird');
-
+function getFiles (rootDirectory) {
   // Scan through entire folder and get all file names
   const directories = [rootDirectory];
   const files = [];
@@ -24,35 +23,130 @@ module.exports = function (rootDirectory, configFile) {
     });
   }
 
-  // Filter only javascript files
-  const jsFiles = files.filter(x => x.endsWith('.js'));
-  console.log('.js found: ' + jsFiles);
+  // Filter files based on fileType
+  const fileType = '.js';
+  const jsFiles = files.filter(x => x.endsWith(fileType));
+  console.log(jsFiles.length + ' ' + fileType + ' files found.');
 
   // Get files' contents
-  const contents = jsFiles.map(x => fs.readFileSync(x, encoding));
+  return jsFiles.map(x => fs.readFileSync(x, encoding));
+}
+
+function getMessages (contents) {
+  const regex = /<FormattedH?T?M?L?Message[^<>]+?(?:<[^<>]+>[^<>]+)*(?:=>[^<>]+)*(?:<[^<>]+>[^<>]+)*>/g;
+  const idRegex = /id="[^"]+"|id={[^{}]+}|id={`[\s\S]+?`}/g;
+  const defaultMessageRegex = /defaultMessage="[^"]+"|defaultMessage={[^{}]+}|defaultMessage={`[\s\S]+?`}/g;
 
   // Get all formatted messages
-  let raw = [];
-  const regex = /<FormattedH?T?M?L?Message[\s\S]+?\/>/g;
+  let messages = [], values = [];
   contents.forEach(x => {
     const matches = x.match(regex);
     if (matches) {
-      raw = raw.concat(matches);
+      messages = messages.concat(matches);
     }
   });
 
-  // Remove white spaces from formatted messages
-  raw = raw.map(x => x.split('\n').map(y => y.trim()).join(' '));
+  // Remove white spaces, outer layer and values from formatted messages
+  messages = messages
+    .map(x => {
+      const y = x.split('\n').map(y => y.trim()).join(' ').split('\' + \'').join('');
+      const i = y.startsWith('<FormattedMessage') ? 17 : (x.startsWith('<FormattedHTMLMessage') ? 21 : 0);
+      const j = y.endsWith('/>') ? y.length-2 : y.length-1;
+      const z = y.substring(i,j).split('values={');
+      if (z[1]) values.push(z[1]);
+      return z[0].trim();
+    });
 
+  // Get formatted messages from values
+  values.forEach(x => {
+    const msg = x.match(regex);
+    if (msg) {
+      msg.forEach(y => {
+        const i = y.startsWith('<FormattedMessage') ? 17 : (x.startsWith('<FormattedHTMLMessage') ? 21 : 0);
+        const j = y.endsWith('/>') ? y.length-2 : y.length-1;
+        messages.push(y.substring(i,j).trim());
+      });
+    }
+  });
+
+  console.log(messages.length + ' formatted messages found.');
+
+  // Get id and defaultMessage from formatted messages
+  const messageJSON = {}, check = {};
+  messages.forEach(x => {
+    let id = x.match(idRegex)[0];
+    let msg = x.match(defaultMessageRegex)[0];
+    let type = 'static';
+
+    if (id.startsWith('id="')) {
+      id = id.substring(4,id.length-1);
+    } else if (id.startsWith('id={`')) {
+      id = id.substring(5,id.length-2);
+      type = 'dynamic';
+    } else if (id.startsWith('id={')) {
+      id = id.substring(4,id.length-1);
+      type = 'dynamic';
+    }
+
+    if (msg.startsWith('defaultMessage="')) {
+      msg = msg.substring(16,msg.length-1);
+    } else if (msg.startsWith('defaultMessage={`')) {
+      msg = msg.substring(17,msg.length-2);
+    } else if (msg.startsWith('defaultMessage={')) {
+      msg = msg.substring(16,msg.length-1);
+    }
+
+    messageJSON[id] = {
+      id: id,
+      defMsg: msg,
+      type: type
+    };
+
+    if (check[id]) {
+      if (check[id].indexOf(msg) === -1) {
+        check[id].push(msg);
+      }
+    }
+    else {
+      check[id] = [msg];
+    }
+  });
+
+  // If there are repeated id withh different messages, throw error
+  const repeat = Object.keys(check).map(x => ({id: x, msgs: check[x]})).filter(x => x.msgs.length > 1);
+  if (repeat.length) {
+    fs.writeFileSync('repeated.json', JSON.stringify(repeat, null, 2));
+    throw 'There are repeated id with different default messages! Refer repeated.json for more information.';
+  }
+
+  console.log(Object.keys(messageJSON).length + ' id found.');
+  return messageJSON;
+}
+
+function reserve (rootDirectory) {
+  const messages = getMessages(getFiles(rootDirectory));
+  const dynamic = {};
+  Object.keys(messages).forEach(x => {
+    if (messages[x].type === 'dynamic') {
+      dynamic[messages[x].id] = messages[x].defMsg;
+    }
+  });
+
+  fs.writeFileSync('dynamic.json', JSON.stringify(dynamic, null, 2));
+  console.log('dynamic.json is created.');
+}
+
+function collate (rootDirectory, configFile, reserveFile) {
   // Filter and get static id and default messages
+  const messages = getMessages(getFiles(rootDirectory));
   const results = {};
-  raw.forEach(x => {
-    const i = x.startsWith('<FormattedMessage id="') ? 22 : (x.startsWith('<FormattedHTMLMessage id="') ? 26 : 0);
-    if (i) {
-      x = x.substr(i).split('" defaultMessage=');
-      results[x[0]] = x[1].startsWith('"') ? x[1].substr(1, x[1].length - 5) : x[1].substr(2, x[1].length - 6);
+  Object.keys(messages).forEach(x => {
+    if (messages[x].type === 'static') {
+      results[messages[x].id] = messages[x].defMsg;
     }
   });
+
+  console.log(Object.keys(results).length + ' static id found.');
 
   // AWS configurations
   const config = JSON.parse(fs.readFileSync(configFile, encoding));
@@ -80,13 +174,14 @@ module.exports = function (rootDirectory, configFile) {
         })));
     })
     .then(data => {
-      const ids = Object.keys(results);
-      console.log(ids.length);
-      console.log(ids);
-      console.log(results);
+      // Get reserve list
+      const reserve = JSON.parse(fs.readFileSync(reserveFile, encoding));
 
+      // Generate latest json object for each locale
+      const ids = Object.keys(results);
       const files = data.map((x, i) => {
         const key = locales[i];
+        const en = key.endsWith('en.json');
         const old = JSON.parse(x.Body.toString());
         const body = {};
 
@@ -94,13 +189,17 @@ module.exports = function (rootDirectory, configFile) {
           if (old[id]) {
             body[id] = old[id];
           } else {
-            body[id] = key.endsWith('en.json')? results[id] : '';
+            body[id] = en ? results[id] : '';
           }
         });
 
-        console.log(key);
-        console.log(old);
-        console.log(body);
+        Object.keys(reserve).forEach(id => {
+          if (old[id]) {
+            body[id] = old[id];
+          } else {
+            body[id] = en ? results[id] : '';
+          }
+        });
 
         return {
           key: key,
@@ -119,4 +218,28 @@ module.exports = function (rootDirectory, configFile) {
         })));
     })
     .then(() => console.log('s3 files are updated!'))
+}
+
+function error () {
+  console.log('Your input is wrong!');
+  console.log('Here\' the proper format: glints-collate-message command rootDirectory -c configFile -r reserveFile');
+  console.log('command: reserve/collate');
+  console.log('Example: ');
+  console.log('$ glints-collate-message reserve app');
+  console.log('$ glints-collate-message collate app -c config.json -r reserve.json');
+}
+
+module.exports = function (command, rootDirectory, configFile, reserveFile) {
+  switch (command) {
+    case 'reserve':
+      reserve(rootDirectory);
+      break;
+    case 'collate':
+      if (!configFile || !reserveFile) error();
+      else collate(rootDirectory, configFile, reserveFile);
+      break;
+    default:
+      error();
+      break;
+  }
 };

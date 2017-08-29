@@ -1,6 +1,6 @@
 {
   "name": "glints-collate-message",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "To collate formatted messages from Glints front end projects for translation (i18n) uses.",
   "main": "index.js",
   "scripts": {

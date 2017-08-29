@@ -3,9 +3,11 @@
 
 const program = require('commander');
 program
-  .arguments('<rootDirectory> <configFile>')
-  .action((rootDirectory, configFile) => {
+  .arguments('<command> <rootDirectory>')
+  .option('-c, --config <file>', 'A config file')
+  .option('-r, --reserve <file>', 'A reserve file')
+  .action((command, rootDirectory) => {
     const lib = require('./lib');
-    lib(rootDirectory, configFile);
+    lib(command, rootDirectory, program.config, program.reserve);
   })
   .parse(process.argv);
