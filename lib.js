@@ -112,7 +112,7 @@ function getMessages (contents) {
     }
   });
 
-  // If there are repeated id withh different messages, throw error
+  // If there are repeated id with different messages, throw error
   const repeat = Object.keys(check).map(x => ({id: x, msgs: check[x]})).filter(x => x.msgs.length > 1);
   if (repeat.length) {
     fs.writeFileSync('repeated.json', JSON.stringify(repeat, null, 2));
@@ -148,6 +148,33 @@ function collate (rootDirectory, configFile, reserveFile) {
 
   console.log(Object.keys(results).length + ' static id found.');
 
+  // Get reserve list
+  const reserve = {};
+  JSON.parse(fs.readFileSync(reserveFile, encoding)).forEach(x => {
+    Object.keys(x.translationPairs).forEach(y => {
+      if (reserve[y]) {
+        console.log(y);
+        throw 'The above is the repeated id in the given reserve file!'
+      } else {
+        reserve[y] = x.translationPairs[y];
+      }
+    });
+  });
+
+  // If there are repeated id between reserve and static, throw error
+  const reserveIds = Object.keys(reserve);
+  const repeat = reserveIds
+    .map(x => ({
+      id: x,
+      reserveMsg: reserve[x],
+      staticMsg: results[x]
+    }))
+    .filter(x => x.staticMsg);
+  if (repeat.length) {
+    fs.writeFileSync('repeatedReserveStatic.json', JSON.stringify(repeat, null, 2));
+    throw 'There are repeated id between reserve and static! Refer repeatedReserveStatic.json for more information.';
+  }
+
   // AWS configurations
   const config = JSON.parse(fs.readFileSync(configFile, encoding));
   AWS.config.region = config.region;
@@ -174,9 +201,6 @@ function collate (rootDirectory, configFile, reserveFile) {
         })));
     })
     .then(data => {
-      // Get reserve list
-      const reserve = JSON.parse(fs.readFileSync(reserveFile, encoding));
-
       // Generate latest json object for each locale
       const ids = Object.keys(results);
       const files = data.map((x, i) => {
@@ -193,7 +217,7 @@ function collate (rootDirectory, configFile, reserveFile) {
           }
         });
 
-        Object.keys(reserve).forEach(id => {
+        reserveIds.forEach(id => {
           if (old[id]) {
             body[id] = old[id];
           } else {
