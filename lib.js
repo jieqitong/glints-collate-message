@@ -221,7 +221,7 @@ function collate (rootDirectory, configFile, reserveFile) {
           if (old[id]) {
             body[id] = old[id];
           } else {
-            body[id] = en ? results[id] : '';
+            body[id] = en ? reserve[id] : '';
           }
         });
 
