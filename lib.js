@@ -4,6 +4,10 @@ const fs = require('fs');
 const Promise = require('bluebird');
 const encoding = 'utf8';
 
+// Default values
+let DynamicFile = '.i18n/dynamic.json';
+let LogFolder = '.i18n';
+
 function getFiles (rootDirectory) {
   // Scan through entire folder and get all file names
   const directories = [rootDirectory];
@@ -115,8 +119,8 @@ function getMessages (contents) {
   // If there are repeated id with different messages, throw error
   const repeat = Object.keys(check).map(x => ({id: x, msgs: check[x]})).filter(x => x.msgs.length > 1);
   if (repeat.length) {
-    fs.writeFileSync('repeated.json', JSON.stringify(repeat, null, 2));
-    throw 'There are repeated id with different default messages! Refer repeated.json for more information.';
+    fs.writeFileSync(LogFolder + '/repeated.json', JSON.stringify(repeat, null, 2));
+    throw 'There are repeated id with different default messages! Refer ' + LogFolder + '/repeated.json for more information.';
   }
 
   console.log(Object.keys(messageJSON).length + ' id found.');
@@ -132,8 +136,8 @@ function reserve (rootDirectory) {
     }
   });
 
-  fs.writeFileSync('dynamic.json', JSON.stringify(dynamic, null, 2));
-  console.log('dynamic.json is created.');
+  fs.writeFileSync(DynamicFile, JSON.stringify(dynamic, null, 2));
+  console.log(DynamicFile + ' is created.');
 }
 
 function collate (rootDirectory, configFile, reserveFile) {
@@ -171,8 +175,8 @@ function collate (rootDirectory, configFile, reserveFile) {
     }))
     .filter(x => x.staticMsg);
   if (repeat.length) {
-    fs.writeFileSync('repeatedReserveStatic.json', JSON.stringify(repeat, null, 2));
-    throw 'There are repeated id between reserve and static! Refer repeatedReserveStatic.json for more information.';
+    fs.writeFileSync(LogFolder + '/repeatedReserveStatic.json', JSON.stringify(repeat, null, 2));
+    throw 'There are repeated id between reserve and static! Refer ' + LogFolder + '/repeatedReserveStatic.json for more information.';
   }
 
   // AWS configurations
@@ -253,7 +257,10 @@ function error () {
   console.log('$ glints-collate-message collate app -c config.json -r reserve.json');
 }
 
-module.exports = function (command, rootDirectory, configFile, reserveFile) {
+module.exports = function (command, rootDirectory, configFile, reserveFile, dynamicFile, logFolder) {
+  if (dynamicFile) DynamicFile = dynamicFile;
+  if (logFolder) LogFolder = logFolder;
+
   switch (command) {
     case 'reserve':
       reserve(rootDirectory);
