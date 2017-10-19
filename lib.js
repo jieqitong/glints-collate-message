@@ -250,7 +250,7 @@ function collate (rootDirectory, configFile, reserveFile) {
 
 function error () {
   console.log('Your input is wrong!');
-  console.log('Here\' the proper format: glints-collate-message command rootDirectory -c configFile -r reserveFile');
+  console.log('Here\'s the proper format: glints-collate-message command rootDirectory -c configFile -r reserveFile');
   console.log('command: reserve/collate');
   console.log('Example: ');
   console.log('$ glints-collate-message reserve app');
