@@ -30,7 +30,7 @@ function getFiles (rootDirectory) {
   // Filter files based on fileType
   const fileType = '.js';
   const jsFiles = files.filter(x => x.endsWith(fileType));
-  console.log(jsFiles.length + ' ' + fileType + ' files found.');
+  console.log(jsFiles.length + ' ' + fileType + ' file(s) found.');
 
   // Get files' contents
   return jsFiles.map(x => fs.readFileSync(x, encoding));
@@ -73,7 +73,7 @@ function getMessages (contents) {
     }
   });
 
-  console.log(messages.length + ' formatted messages found.');
+  console.log(messages.length + ' formatted message(s) found.');
 
   // Get id and defaultMessage from formatted messages
   const messageJSON = {}, check = {};
@@ -123,7 +123,7 @@ function getMessages (contents) {
     throw 'There are repeated id with different default messages! Refer ' + LogFolder + '/repeated.json for more information.';
   }
 
-  console.log(Object.keys(messageJSON).length + ' id found.');
+  console.log(Object.keys(messageJSON).length + ' id(s) found.');
   return messageJSON;
 }
 
@@ -150,7 +150,7 @@ function collate (rootDirectory, configFile, reserveFile) {
     }
   });
 
-  console.log(Object.keys(results).length + ' static id found.');
+  console.log(Object.keys(results).length + ' static id(s) found.');
 
   // Get reserve list
   const reserve = {};
