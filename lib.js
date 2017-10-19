@@ -116,11 +116,11 @@ function getMessages (contents) {
     }
   });
 
-  // If there are repeated id with different messages, throw error
+  // If there are repeated ids with different messages, throw error
   const repeat = Object.keys(check).map(x => ({id: x, msgs: check[x]})).filter(x => x.msgs.length > 1);
   if (repeat.length) {
     fs.writeFileSync(LogFolder + '/repeated.json', JSON.stringify(repeat, null, 2));
-    throw 'There are repeated id with different default messages! Refer ' + LogFolder + '/repeated.json for more information.';
+    throw 'There are repeated ids with different default messages! Refer to ' + LogFolder + '/repeated.json for more information.';
   }
 
   console.log(Object.keys(messageJSON).length + ' id(s) found.');
