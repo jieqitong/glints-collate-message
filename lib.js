@@ -261,16 +261,20 @@ module.exports = function (command, rootDirectory, configFile, reserveFile, dyna
   if (dynamicFile) DynamicFile = dynamicFile;
   if (logFolder) LogFolder = logFolder;
 
-  switch (command) {
-    case 'reserve':
-      reserve(rootDirectory);
-      break;
-    case 'collate':
-      if (!configFile || !reserveFile) error();
-      else collate(rootDirectory, configFile, reserveFile);
-      break;
-    default:
-      error();
-      break;
+  try {
+    switch (command) {
+      case 'reserve':
+        reserve(rootDirectory);
+        break;
+      case 'collate':
+        if (!configFile || !reserveFile) error();
+        else collate(rootDirectory, configFile, reserveFile);
+        break;
+      default:
+        error();
+        break;
+    }
+  } catch (e) {
+    console.error(e); 
   }
 };
