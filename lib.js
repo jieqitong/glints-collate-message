@@ -245,7 +245,13 @@ function collate (rootDirectory, configFile, reserveFile) {
           ContentType: 'application/json'
         })));
     })
-    .then(() => console.log('s3 files are updated!'))
+    .then(response => { 
+      if (!response || !response.length) {
+        console.error('No s3 files are updated. Please relook at your s3 config');
+      } else {
+        console.log('s3 files are updated!')
+      }
+    })
 }
 
 function error () {
